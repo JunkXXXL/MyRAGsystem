@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 import speech_recognition as sr
-import librosa, torch, pathlib
+import torch, pathlib
 import subprocess
-import whisper
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from datasets import load_dataset
 
 
 class RecognizeStrategyAudio(ABC):
@@ -69,8 +70,25 @@ class RecognizeAudioWhisper(RecognizeStrategyAudio):
 
         self.device = self._set_device()
 
-        self.model = whisper.load_model("turbo")
-        self.model.to(self.device)
+        torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+        model_id = "openai/whisper-large-v3-turbo"
+
+        model = AutoModelForSpeechSeq2Seq.from_pretrained(
+            model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True)
+
+        model.to(self.device)
+
+        processor = AutoProcessor.from_pretrained(model_id)
+
+        self.pipe = pipeline(
+            "automatic-speech-recognition",
+            model=model,
+            tokenizer=processor.tokenizer,
+            feature_extractor=processor.feature_extractor,
+            torch_dtype=torch_dtype,
+            device=device,
+        )
 
     def _set_device(self):
         device = "cuda:0"
@@ -78,9 +96,14 @@ class RecognizeAudioWhisper(RecognizeStrategyAudio):
             device = "cpu"
         return device
 
-    def recognize(self, audio_path: pathlib.Path) -> str | None:
+    def recognize(self, audio_path: pathlib.Path) -> dict:
+        """Вернётся словарь с полями 'text' - текст записи,
+        'language' - язык распознанной речи,
+        'segments' - массив сегментов, каждый сегмент это словарь,
+        в котором есть ключи начала и конца сегмента ('start', 'end')
+        и ключ 'text'"""
         result = self.model.transcribe(str(audio_path.absolute()), temperature=1)
-        return result.text
+        return result
 
 
 class TranscribeVideo(RecognizeStrategyVideo):
@@ -124,24 +147,42 @@ class TranscribeVideo(RecognizeStrategyVideo):
 
 
 if __name__ == "__main__":
-    path = pathlib.Path(r"C:\Users\SCII4\Desktop\Andrain\FastApi\logistic1.wav")
-
-    recognizer = RecognizeAudioSpeech()
-    text = recognizer.recognize(path)
-    print(text)
-    exit()
+    path = pathlib.Path(r"D:\Users\aleksandr.kovalev\Desktop\Andrey_stazher\MyRAG\MyRAGsystem\logistic1.wav")
+    #
+    # recognizer = RecognizeAudioSpeech()
+    # text = recognizer.recognize(path)
+    # print(text)
+    # exit()
 
     device = "cuda:0"
     if not torch.cuda.is_available():
         device = "cpu"
         print("Cuda is not avaliable")
 
-    model = whisper.load_model("turbo")
-    model.to(device)
-    result = model.transcribe(str(path.absolute()))
+    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    for segment in result["segments"]:
-        start = segment["start"]  # Время начала сегмента
-        end = segment["end"]  # Время окончания сегмента
-        text = segment["text"]  # Распознанный текст сегмента
+    model_id = "openai/whisper-large-v3-turbo"
+
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True)
+    model.to(device)
+
+    processor = AutoProcessor.from_pretrained(model_id)
+
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        torch_dtype=torch_dtype,
+        device=device,
+    )
+
+
+    result = pipe(str(path.absolute()), return_timestamps=True)
+
+    for segment in result["chunks"]:
+        start = segment["timestamp"][0]
+        end = segment["timestamp"][1]
+        text = segment["text"]
         print(f"[{start:.2f} - {end:.2f}] {text}")

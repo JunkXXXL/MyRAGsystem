@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 
 import torch
 from transformers import AutoTokenizer, AutoModel
-from torch import sum, clamp
-import wtpsplit
 
 
 class SummarizerStrategy(ABC):
@@ -26,30 +24,22 @@ class SummarizerSBert(SummarizerStrategy):
         self.model.to(self.device)
         self.model.eval()
 
-        self.sat = wtpsplit.SaT("sat-3l")
-        self.sat.half().to(self.device)
-
     def _set_device(self):
         device = "cuda:0"
         if not torch.cuda.is_available():
             device = "cpu"
         return device
 
-    def split_text(self, whole_text: str):
-        split_text = self.sat.split(whole_text, do_paragraph_segmentation=True)
-        return split_text
-
     def summarize(self, text_to_summarize: str) -> list:
-        split_text = self.split_text(text_to_summarize)
 
         embeddings_list = []
         with torch.no_grad():
-            for paragraph in split_text:
+            for paragraph in text_to_summarize:
                 str_paragraph = "".join(paragraph)
                 input_ids = self.tokenizer.encode(str_paragraph, return_tensors="pt", add_special_tokens=True, truncation=True,
                                                       max_length=self.max_length_input_text)
 
-                outputs = self.model(input_ids)
+                outputs = self.model(input_ids.to(self.device))
                 cls_of_text = outputs[0][:, 0, :] #outputs[0][:, 0, :].tolist()
                 embeddings_list.append(cls_of_text[0])
 

@@ -19,7 +19,7 @@ async def summarize_audio(file_name: str):
 
     if audiofile_path.exists() and audiofile_path.is_file():
         text_from_audio = context.transcriber.recognizer(audiofile_path)
-        summary_vector = context.summarizer.summarize(text_from_audio)
+        summary_vector = context.summarizer.summarize(text_from_audio.text)
 
         try:
             summarization_handler.insert_record({"file_name": file_name, "summary_vector": summary_vector})
