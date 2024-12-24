@@ -18,7 +18,7 @@ async def summarize_audio(file_name: str):
     audiofile_path = Path(file_name)
 
     if audiofile_path.exists() and audiofile_path.is_file():
-        text_from_audio = context.transcriber.transcribe(audiofile_path)
+        text_from_audio = context.transcriber.recognizer(audiofile_path)
         summary_vector = context.summarizer.summarize(text_from_audio)
 
         try:

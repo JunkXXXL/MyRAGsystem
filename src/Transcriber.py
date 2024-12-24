@@ -3,18 +3,67 @@ import speech_recognition as sr
 import librosa, torch, pathlib
 import subprocess
 import whisper
-import wtpsplit
 
-class TranscribeStrategy(ABC):
+
+class RecognizeStrategyAudio(ABC):
     def __init__(self):
         pass
 
     @abstractmethod
-    def transcribe(self, path: pathlib.Path):
+    def _set_device(self):
+        pass
+
+    @abstractmethod
+    def recognize(self, path: pathlib.Path):
         pass
 
 
-class TranscribeAudio(TranscribeStrategy):
+class RecognizeStrategyVideo(ABC):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def _set_device(self):
+        pass
+
+    @abstractmethod
+    def transcribe(self, path: pathlib.Path) -> str | None:
+        pass
+
+    @abstractmethod
+    def convert_to_audio(self, audio_path: pathlib.Path) -> str | None:
+        pass
+
+
+class RecognizeAudioSpeech(RecognizeStrategyAudio):
+    def __init__(self):
+        super().__init__()
+        self.recognizer = sr.Recognizer()
+        self.device = self._set_device()
+
+    def _set_device(self) -> str:
+        device = "cuda:0"
+        if not torch.cuda.is_available():
+            device = "cpu"
+        return device
+
+    def recognize(self, path: pathlib.Path):
+        path = str(path.absolute())
+        try:
+            with sr.AudioFile(path) as source:
+                audio = self.recognizer.record(source)
+            text = self.recognizer.recognize_google(audio, language="ru-RU")
+
+        except sr.UnknownValueError:
+            text = "Не удалось распознать речь"
+
+        except sr.RequestError as e:
+            text = f"Ошибка сервиса Google Speech Recognition: {e}"
+
+        return text
+
+
+class RecognizeAudioWhisper(RecognizeStrategyAudio):
     def __init__(self):
         super().__init__()
 
@@ -27,20 +76,22 @@ class TranscribeAudio(TranscribeStrategy):
         device = "cuda:0"
         if not torch.cuda.is_available():
             device = "cpu"
-            print("Cuda is not available")
         return device
 
-    def transcribe(self, audio_path: pathlib.Path) -> str | None:
+    def recognize(self, audio_path: pathlib.Path) -> str | None:
         result = self.model.transcribe(str(audio_path.absolute()), temperature=1)
         return result.text
 
 
-class TranscribeVideo(TranscribeStrategy):
+class TranscribeVideo(RecognizeStrategyVideo):
     def __init__(self):
         super().__init__()
         self.recognizer = sr.Recognizer()
 
-    def transcribe(self, video_path: pathlib.Path):
+    def _set_device(self):
+        pass
+
+    def recognize(self, video_path: pathlib.Path):
         audio_path = self.convert_to_audio(video_path)
         path = str(audio_path.absolute())
 
@@ -73,7 +124,12 @@ class TranscribeVideo(TranscribeStrategy):
 
 
 if __name__ == "__main__":
-    path = pathlib.Path(r"C:\Users\SCII4\Desktop\Andrain\FastApi\ДифференциальныеУравнения1.wav")
+    path = pathlib.Path(r"C:\Users\SCII4\Desktop\Andrain\FastApi\logistic1.wav")
+
+    recognizer = RecognizeAudioSpeech()
+    text = recognizer.recognize(path)
+    print(text)
+    exit()
 
     device = "cuda:0"
     if not torch.cuda.is_available():

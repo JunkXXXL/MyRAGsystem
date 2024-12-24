@@ -59,7 +59,7 @@ class SummarizationHandler(TableHandler):
 
     def hnsw_search(self, vector: list) -> clickhouse_connect.driver.client.QuerySummary:
         return self.client.command(f"SELECT file_name FROM {self.table_name}"
-                                   f" ORDER BY cosineDistance (summary_vector, {vector}) LIMIT 1")
+                                   f" ORDER BY cosineDistance (summary_vector, {vector}) LIMIT 4")
 
     def info(self) -> clickhouse_connect.driver.client.QueryResult:
         return self.client.query(f"SELECT * FROM {self.table_name}")

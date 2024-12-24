@@ -33,7 +33,6 @@ class SummarizerSBert(SummarizerStrategy):
         device = "cuda:0"
         if not torch.cuda.is_available():
             device = "cpu"
-            print("Cuda is not available")
         return device
 
     def split_text(self, whole_text: str):
@@ -55,7 +54,7 @@ class SummarizerSBert(SummarizerStrategy):
                 embeddings_list.append(cls_of_text[0])
 
         averaged_vector = (torch.stack(embeddings_list).mean(dim=0))
-        return list(averaged_vector)
+        return averaged_vector.tolist()
 
 
 if __name__ == "__main__":
