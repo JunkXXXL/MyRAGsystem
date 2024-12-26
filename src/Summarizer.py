@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 import torch
 from transformers import AutoTokenizer, AutoModel
+from numpy import array
 
 
 class SummarizerStrategy(ABC):
@@ -30,21 +31,29 @@ class SummarizerSBert(SummarizerStrategy):
             device = "cpu"
         return device
 
-    def summarize(self, text_to_summarize: str) -> list:
+    def summarize(self, text_to_summarize: list) -> [list, list]:
+        """
+        :param text_to_summarize:  массив предложений
+        :return: вернёт summarized вектор, размерностью 1024; вернёт n векторов размерностью 1024
+        """
 
         embeddings_list = []
         with torch.no_grad():
             for paragraph in text_to_summarize:
                 str_paragraph = "".join(paragraph)
-                input_ids = self.tokenizer.encode(str_paragraph, return_tensors="pt", add_special_tokens=True, truncation=True,
-                                                      max_length=self.max_length_input_text)
+                input_ids = self.tokenizer.encode(str_paragraph, return_tensors="pt", add_special_tokens=True,
+                                                  truncation=True, max_length=self.max_length_input_text)
 
                 outputs = self.model(input_ids.to(self.device))
                 cls_of_text = outputs[0][:, 0, :] #outputs[0][:, 0, :].tolist()
                 embeddings_list.append(cls_of_text[0])
 
         averaged_vector = (torch.stack(embeddings_list).mean(dim=0))
-        return averaged_vector.tolist()
+        return averaged_vector.tolist(), [i.tolist() for i in embeddings_list]
+
+    def avarage_summarize_vector(self, summarised_sentences: list) -> list:
+        return list(array(summarised_sentences).mean(axis=0))
+
 
 
 if __name__ == "__main__":
@@ -57,6 +66,13 @@ if __name__ == "__main__":
     
     В прочем, поездка оказалась классной, если еще возместят половину от потраченной суммы, то готов буду хоть каждую неделю на хакатоны гонять
     """
+    import Transcriber, pathlib
+
+    path = pathlib.Path(r"D:\Users\aleksandr.kovalev\Desktop\Andrey_stazher\MyRAG\MyRAGsystem\logistic1.wav")
+
+    whisper = Transcriber.RecognizeAudioWhisper()
+    recognized_dict = whisper.recognize(path)
+
     summar = SummarizerSBert()
-    vector = summar.summarize(text)
+    vector, vectors = summar.summarize(recognized_dict["chunks"])
     print(len(vector))

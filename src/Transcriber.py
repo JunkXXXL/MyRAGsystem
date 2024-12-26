@@ -11,20 +11,12 @@ class RecognizeStrategyAudio(ABC):
         pass
 
     @abstractmethod
-    def _set_device(self):
-        pass
-
-    @abstractmethod
     def recognize(self, path: pathlib.Path):
         pass
 
 
 class RecognizeStrategyVideo(ABC):
     def __init__(self):
-        pass
-
-    @abstractmethod
-    def _set_device(self):
         pass
 
     @abstractmethod
@@ -87,7 +79,7 @@ class RecognizeAudioWhisper(RecognizeStrategyAudio):
             tokenizer=processor.tokenizer,
             feature_extractor=processor.feature_extractor,
             torch_dtype=torch_dtype,
-            device=device,
+            device=self.device,
         )
 
     def _set_device(self):
@@ -102,7 +94,7 @@ class RecognizeAudioWhisper(RecognizeStrategyAudio):
         'segments' - массив сегментов, каждый сегмент это словарь,
         в котором есть ключи начала и конца сегмента ('start', 'end')
         и ключ 'text'"""
-        result = self.model.transcribe(str(audio_path.absolute()), temperature=1)
+        result = self.pipe(str(audio_path.absolute()), return_timestamps=True)
         return result
 
 
@@ -148,19 +140,12 @@ class TranscribeVideo(RecognizeStrategyVideo):
 
 if __name__ == "__main__":
     path = pathlib.Path(r"D:\Users\aleksandr.kovalev\Desktop\Andrey_stazher\MyRAG\MyRAGsystem\logistic1.wav")
-    #
-    # recognizer = RecognizeAudioSpeech()
-    # text = recognizer.recognize(path)
-    # print(text)
-    # exit()
 
     device = "cuda:0"
     if not torch.cuda.is_available():
         device = "cpu"
-        print("Cuda is not avaliable")
 
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-
     model_id = "openai/whisper-large-v3-turbo"
 
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
@@ -168,7 +153,6 @@ if __name__ == "__main__":
     model.to(device)
 
     processor = AutoProcessor.from_pretrained(model_id)
-
     pipe = pipeline(
         "automatic-speech-recognition",
         model=model,
@@ -177,7 +161,6 @@ if __name__ == "__main__":
         torch_dtype=torch_dtype,
         device=device,
     )
-
 
     result = pipe(str(path.absolute()), return_timestamps=True)
 

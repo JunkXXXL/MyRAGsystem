@@ -23,6 +23,52 @@ class TableHandler(ABC):
         pass
 
 
+class SentenceHandler(TableHandler):
+    def __init__(self, client: clickhouse_connect.driver.Client) -> None:
+        super().__init__(client)
+        self.client = client
+        self.table_name = "sentences"
+        self._create_table()
+
+    def _create_table(self):
+        self.client.command("SET allow_experimental_vector_similarity_index = 1;")
+        self.client.command(f"CREATE TABLE IF NOT EXISTS {self.table_name}"
+                            f" ("
+                            f" created_at DateTime DEFAULT now(),"
+                            f" master_name String, summary_vector Array(Float32), sentence String,"
+                            f" INDEX idx_HNSW summary_vector TYPE vector_similarity('hnsw', 'L2Distance')"
+                            f" )"
+                            f" ENGINE MergeTree"
+                            f" ORDER BY created_at")
+
+    def insert_record(self, parameters: dict):
+        """
+        Принимает аргумент словарь с ключами 'master_name', 'summary_vector' и 'sentence'
+        """
+        file_name = parameters["master_name"]
+        summary_vector = parameters["summary_vector"]
+        sentence = parameters["sentence"]
+        self.client.command(
+            f" INSERT INTO {self.table_name} (master_name, summary_vector,"
+            f" sentence) VALUES ('{file_name}', {summary_vector}, '{sentence}')")
+
+    def delete_table(self) -> None:
+        self.client.command(f"DROP TABLE IF EXISTS {self.table_name}")
+
+    def delete_record(self) -> None:
+        """Не реализована"""
+        pass
+
+    def hnsw_search(self, vector: list, file_path: list) -> clickhouse_connect.driver.client.QuerySummary:
+        return self.client.query(f"select sentence from summarization "
+                          f"left join sentences on summarization.file_name == sentences.master_name "
+                          f"where sentences.master_name == '{file_path}' "
+                          f"ORDER BY cosineDistance (sentences.summary_vector, {vector}) LIMIT 1").result_rows
+
+    def info(self) -> clickhouse_connect.driver.client.QueryResult:
+        return self.client.query(f"SELECT * FROM {self.table_name}")
+
+
 class SummarizationHandler(TableHandler):
     def __init__(self, client: clickhouse_connect.driver.Client) -> None:
         super().__init__(client)
@@ -42,12 +88,12 @@ class SummarizationHandler(TableHandler):
                             f" ORDER BY created_at")
 
 
-    def insert_record(self, parametrs: dict) -> None:
+    def insert_record(self, parameters: dict) -> None:
         """
         Принимает аргумент словарь с ключами 'file_name' и 'summary_vector'
         """
-        file_name = parametrs["file_name"]
-        summary_vector = parametrs["summary_vector"]
+        file_name = parameters["file_name"]
+        summary_vector = parameters["summary_vector"]
         self.client.command(f"INSERT INTO {self.table_name} (file_name, summary_vector) VALUES ('{file_name}', {summary_vector})")
 
     def delete_table(self) -> None:
@@ -58,8 +104,8 @@ class SummarizationHandler(TableHandler):
         pass
 
     def hnsw_search(self, vector: list) -> clickhouse_connect.driver.client.QuerySummary:
-        return self.client.command(f"SELECT file_name FROM {self.table_name}"
-                                   f" ORDER BY cosineDistance (summary_vector, {vector}) LIMIT 4")
+        return self.client.query(f"SELECT file_name FROM {self.table_name}"
+                                   f" ORDER BY cosineDistance (summary_vector, {vector}) LIMIT 4").result_rows
 
     def info(self) -> clickhouse_connect.driver.client.QueryResult:
         return self.client.query(f"SELECT * FROM {self.table_name}")
@@ -70,8 +116,10 @@ client = clickhouse_connect.get_client(host="localhost", username="default", pas
 if __name__ == "__main__":
     from numpy import zeros
 
-    test_vector = zeros([1024])
+    #test_vector = zeros([1024])
     handler = SummarizationHandler(client)
-    result = handler.hnsw_search(test_vector.tolist())
+    handler2 = SentenceHandler(client)
+    result = handler2.info() #handler.hnsw_search(test_vector.tolist())
+    res = handler2.hnsw_search([0.]*1024, r"D:\Users\aleksandr.kovalev\Desktop\Andrey_stazher\MyRAG\MyRAGsystem\logistic1.wav")
 
-    print(result)
+    print(res)
