@@ -3,7 +3,6 @@ import speech_recognition as sr
 import torch, pathlib
 import subprocess
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-from datasets import load_dataset
 
 
 class RecognizeStrategyAudio(ABC):

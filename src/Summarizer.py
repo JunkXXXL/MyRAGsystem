@@ -31,10 +31,10 @@ class SummarizerSBert(SummarizerStrategy):
             device = "cpu"
         return device
 
-    def summarize(self, text_to_summarize: list) -> [list, list]:
+    def summarize(self, text_to_summarize: list) -> [list]:
         """
         :param text_to_summarize:  массив предложений
-        :return: вернёт summarized вектор, размерностью 1024; вернёт n векторов размерностью 1024
+        :return: вернёт summarized вектор, размерностью 1024
         """
 
         embeddings_list = []
@@ -49,7 +49,7 @@ class SummarizerSBert(SummarizerStrategy):
                 embeddings_list.append(cls_of_text[0])
 
         averaged_vector = (torch.stack(embeddings_list).mean(dim=0))
-        return averaged_vector.tolist(), [i.tolist() for i in embeddings_list]
+        return averaged_vector.tolist()
 
     def avarage_summarize_vector(self, summarised_sentences: list) -> list:
         return list(array(summarised_sentences).mean(axis=0))

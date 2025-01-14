@@ -61,9 +61,10 @@ class SentenceHandler(TableHandler):
 
     def hnsw_search(self, vector: list, file_path: list) -> clickhouse_connect.driver.client.QuerySummary:
         return self.client.query(f"select sentence from summarization "
-                          f"left join sentences on summarization.file_name == sentences.master_name "
-                          f"where sentences.master_name == '{file_path}' "
-                          f"ORDER BY cosineDistance (sentences.summary_vector, {vector}) LIMIT 1").result_rows
+                                 f"left join sentences on summarization.file_name == sentences.master_name "
+                                 f"where sentences.master_name == '{file_path}' "
+                                 f"AND cosineDistance (sentences.summary_vector, {vector}) < 0.4 "
+                                 f"ORDER BY cosineDistance (sentences.summary_vector, {vector}) ASC LIMIT 10").result_rows
 
     def info(self) -> clickhouse_connect.driver.client.QueryResult:
         return self.client.query(f"SELECT * FROM {self.table_name}")
@@ -104,8 +105,8 @@ class SummarizationHandler(TableHandler):
         pass
 
     def hnsw_search(self, vector: list) -> clickhouse_connect.driver.client.QuerySummary:
-        return self.client.query(f"SELECT file_name FROM {self.table_name}"
-                                   f" ORDER BY cosineDistance (summary_vector, {vector}) LIMIT 4").result_rows
+        return self.client.query(f"select file_name from summarization "
+                                 f"ORDER BY cosineDistance (summary_vector, {vector}) ASC LIMIT 3").result_rows
 
     def info(self) -> clickhouse_connect.driver.client.QueryResult:
         return self.client.query(f"SELECT * FROM {self.table_name}")
@@ -114,12 +115,23 @@ class SummarizationHandler(TableHandler):
 client = clickhouse_connect.get_client(host="localhost", username="default", password="123")
 
 if __name__ == "__main__":
-    from numpy import zeros
-
-    #test_vector = zeros([1024])
-    handler = SummarizationHandler(client)
-    handler2 = SentenceHandler(client)
-    result = handler2.info() #handler.hnsw_search(test_vector.tolist())
-    res = handler2.hnsw_search([0.]*1024, r"D:\Users\aleksandr.kovalev\Desktop\Andrey_stazher\MyRAG\MyRAGsystem\logistic1.wav")
-
-    print(res)
+    # import numpy as np
+    # import faiss
+    #
+    # dim = 512  # рассмотрим произвольные векторы размерности 512
+    # nb = 10000  # количество векторов в индексе
+    # nq = 5  # количество векторов в выборке для поиска
+    # np.random.seed(228)
+    # vectors = np.random.random((nb, dim)).astype('float32')
+    # query = np.random.random((nq, dim)).astype('float32')
+    #
+    # index = faiss.IndexFlatL2(dim)
+    # print(index.ntotal)  # пока индекс пустой
+    # index.add(vectors)
+    # print(index.ntotal)  # теперь в нем 10 000 векторов
+    #
+    # topn = 7
+    # D, I = index.search(query, topn)  # Возвращает результат: Distances, Indices
+    # print(I)
+    # print(D)
+    exit()

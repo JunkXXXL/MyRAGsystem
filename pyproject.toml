@@ -17,6 +17,7 @@ transformers = "^4.47.1"
 datasets = "^3.2.0"
 accelerate = "^1.2.1"
 fastapi = {extras = ["standard"], version = "^0.115.6"}
+langchain-gigachat = "^0.3.2"
 
 
 [[tool.poetry.source]]
