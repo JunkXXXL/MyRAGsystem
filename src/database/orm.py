@@ -115,6 +115,11 @@ class SummarizationHandler(TableHandler):
 client = clickhouse_connect.get_client(host="localhost", username="default", password="123")
 
 if __name__ == "__main__":
+    sentences = SentenceHandler(client)
+    summarization = SummarizationHandler(client)
+    sentences.delete_table()
+    summarization.delete_table()
+
     # import numpy as np
     # import faiss
     #
