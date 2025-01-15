@@ -1,0 +1,9 @@
+https://www.youtube.com/watch?v=bv_It-GH-yA   RAG и как его готовить
+
+https://clickhouse.com/docs/ru/getting-started/tutorial clickhouse и как его запустить
+
+https://developers.sber.ru/docs/ru/gigachat/quickstart/legal-using-api?tool=python как сгенерировать Authorization_Key для Gigachat
+
+https://github.com/openai/whisper?ysclid=m5xm2qavja123196513 библиотека для работы с GigaChat Api
+
+https://github.com/openai/whisper?ysclid=m5xm2qavja123196513 Whisper с python примером использования

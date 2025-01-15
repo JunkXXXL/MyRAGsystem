@@ -33,3 +33,5 @@ SummarizationHandler — управление таблицей summarization.
 - Transcriber.py
 Модуль для транскрибирования аудио и видео (в текущей версии не работает).
 
+- Context.py
+Содержит класс context, который используется в main.py
