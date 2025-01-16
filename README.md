@@ -1,15 +1,50 @@
 
 Pipeline RAG системы 
 
-[Установка](Установка)\
-Требует python 3.12. Pyproject.toml содержит в себе все python зависимости. Чтобы установать все библиотеки нужно сначала с помощью pip установить poetry, а после воспользоваться командой "poetry install". Для запуска требуется запущенный clickhouse, так же нужно настроить подключения в orm.py в clickhouse_connect.get_client вставив данные для подключения. В main.py нужно в LlmGigaChat нужно вставить свой Authorization_Key.
+## Установка
+Требует python 3.11. Pyproject.toml содержит в себе все python зависимости. Чтобы установать все библиотеки нужно сначала с помощью pip установить poetry, а после воспользоваться командой "poetry install". Для запуска требуется запущенный clickhouse, так же нужно настроить подключения в orm.py в clickhouse_connect.get_client вставив данные для подключения. В main.py нужно в LlmGigaChat нужно вставить свой Authorization_Key.
 
-[Запуск](Запуск)\
-Для запуска проекта требуется воспользоваться фреймворком fast api. Команда "fastapi dev src/main.py" запустит проект.
+```git clone (ссылка)```
 
+затем требуется установить poetry 
 
+```commandline
+python3 -m .venv venv
+.venv\Scripts\activate
+pip install poetry 
+```
 
-[Структура проекта]() 
+После нужно установить все зависимости с помощью poetry
+
+```commandline
+poetry install
+```
+
+## Запуск
+Для запуска проекта требуется воспользоваться фреймворком fast api. Команда 
+```fastapi dev src/main.py```
+запустит проект.
+
+## Архитектура
+### Описание End-point'ов
+
+1. Summary_audio
+
+На вход принимает путь к файлу в формате ```.wav```, расшифровывает речь в текст, разбивает текст на предложения, получает вектор обобщения для текста и для каждого предложения, записывает в таблицу sentence предложение, вектор, имя файла; записывает в таблицу summarization имя файла и вектор. Функция вернёт словарь со значением ```execution``` , который либо вернёт ok, либо ошибку выполнения.
+
+2. Summary_text
+
+На вход принимает путь к файлу в формате ```.txt```, разбивает текст на предложения, получает вектор обобщения для текста и для каждого предложения, записывает в таблицу sentence предложение, вектор, имя файла; записывает в таблицу summarization имя файла и вектор. Функция вернёт словарь со значением ```execution``` , который либо вернёт ok, либо ошибку выполнения.
+
+3. tableinfo
+
+Функция, которая вернёт все пути файлов введённые в таблицу summarization, возвращает словарь со значением execution либо ошибкой, либо данными о таблице.
+
+4. hnsw_search
+
+Функция, которая принимает на вход вопрос в формате str и вернёт словарь со значениями execution и answer. Execution вернёт ошибку или ok в случае успешного выполнения. Answer вернёт ответ от LLM или 0 в случае ошибки.
+
+### Структура проекта 
 - orm.py
 Управление взаимодействием с базой данных ClickHouse.
 SentenceHandler — управление таблицей sentences.
@@ -35,3 +70,27 @@ SummarizationHandler — управление таблицей summarization.
 
 - Context.py
 Содержит класс context, который используется в main.py
+
+### Зачем нужен Context?
+Возможно возникнет потребность создать свой собственный класс TextSplitter, LLM, Summarizer, orm или Transcriber,
+в таком случае нужно отнаследоваться от соответсвующей стратегии, перегрузить нужные функции и заменить класс в context. 
+
+Пример c TextSplitter: \
+Отнаследуемся от TextSplitter и перегрузим функцию *split*
+```commandline
+class NewSplitter(TextSplitter):
+    def __init__(self):
+        super().__init__()
+
+    def split(self, text: str) -> list:
+        text = text.replace('!', '.')
+        text = text.replace('?', '.')
+        return text.split('.')
+```
+Перейдём в *Context.py* и заменим *text_splitter*
+```
+class Context:
+    def __init__(self):
+        ...
+        self.text_splitter: TextSplitter = NewSplitter() # OldSplitter()
+```

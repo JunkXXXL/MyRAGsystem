@@ -1,9 +1,10 @@
-import re
+from abc import ABC, abstractmethod
 
-class TextSplitter:
+class TextSplitter(ABC):
     def __init__(self):
         pass
 
+    @abstractmethod
     def split(self, text: str):
         pass
 

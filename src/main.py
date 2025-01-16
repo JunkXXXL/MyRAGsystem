@@ -5,6 +5,7 @@ from database import orm
 from LLM import LlmGigaChat
 
 app = FastAPI()
+
 context = Context()
 
 summarization_handler = orm.SummarizationHandler(orm.client)
@@ -84,7 +85,7 @@ async def get_info():
         error = "Error: \n" + str(exception)
         return {"execution": error}
 
-    return {"clickhouse": table_info.result_rows}
+    return {"execution": table_info.result_rows}
 
 
 @app.get("/hnsw_search")
@@ -101,13 +102,13 @@ async def hnsw_search(request_txt: str):
 
         except BaseException as exception:
             error = "Error: " + str(exception)
-            return {"execution ": error}
+            return {"execution ": error, "answer": 0}
 
         try:
             llm_result = llm.get_answer(request_txt, sentences)
 
         except BaseException as exception:
             error = "Error: " + str(exception)
-            return {"execution ": error, "sentences ": sentences}
+            return {"execution ": error, "answer": 0}
 
         return {"execution ": sentences, "answer ": llm_result}
